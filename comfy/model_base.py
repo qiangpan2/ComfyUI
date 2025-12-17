@@ -141,8 +141,14 @@ class BaseModel(torch.nn.Module):
             self.diffusion_model = unet_model(**unet_config, device=device, operations=operations)
             self.diffusion_model.eval()
             if comfy.model_management.force_channels_last():
-                self.diffusion_model.to(memory_format=torch.channels_last)
-                logging.debug("using channels last mode for diffusion model")
+                for name, module in self.diffusion_model.named_modules():
+                    if isinstance(module, torch.nn.Conv2d):
+                        if module.weight.ndim == 4:
+                            module.weight.data = module.weight.data.to(memory_format=torch.channels_last)
+                    elif isinstance(module, torch.nn.Conv3d):
+                        if module.weight.ndim == 5:
+                            module.weight.data = module.weight.data.to(memory_format=torch.channels_last_3d)
+                logging.debug("Applied per-layer channels_last format to diffusion model")
             logging.info("model weight dtype {}, manual cast: {}".format(self.get_dtype(), self.manual_cast_dtype))
         self.model_type = model_type
         self.model_sampling = model_sampling(model_config, model_type)

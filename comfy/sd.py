@@ -668,6 +668,16 @@ class VAE:
             dtype = model_management.vae_dtype(self.device, self.working_dtypes)
         self.vae_dtype = dtype
         self.first_stage_model.to(self.vae_dtype)
+        if comfy.model_management.force_channels_last():
+            for name, module in self.first_stage_model.named_modules():
+                if isinstance(module, torch.nn.Conv2d):
+                    if module.weight.ndim == 4:  # (out_channels, in_channels, H, W)
+                        module.weight.data = module.weight.data.to(memory_format=torch.channels_last)
+                elif isinstance(module, torch.nn.Conv3d):
+                    if module.weight.ndim == 5:  # (out_channels, in_channels, D, H, W)
+                        module.weight.data = module.weight.data.to(memory_format=torch.channels_last_3d)
+            logging.debug("Applied per-layer channels_last format to VAE")
+        
         self.output_device = model_management.intermediate_device()
 
         self.patcher = comfy.model_patcher.ModelPatcher(self.first_stage_model, load_device=self.device, offload_device=offload_device)
