@@ -795,7 +795,9 @@ class ModelPatcher:
                 logging.info("loaded completely; {:.2f} MB usable, {:.2f} MB loaded, full load: {}".format(lowvram_model_memory / (1024 * 1024), mem_counter / (1024 * 1024), full_load))
                 self.model.model_lowvram = False
                 if full_load:
-                    self.model.to(device_to)
+                    # Use torch.preserve_format to keep channels_last/channels_last_3d
+                    self.model.to(device_to, memory_format=torch.preserve_format)
+                    logging.info(f"ModelPatcher: moved model to {device_to} with memory_format preservation")
                     mem_counter = self.model_size()
 
             self.model.lowvram_patch_counter += patch_counter
