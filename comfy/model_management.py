@@ -1080,6 +1080,12 @@ def sync_stream(device, stream):
     current_stream(device).wait_stream(stream)
 
 def cast_to(weight, dtype=None, device=None, non_blocking=False, copy=False, stream=None):
+    # Log if we're preserving special memory formats
+    if weight.ndim == 4 and weight.is_contiguous(memory_format=torch.channels_last):
+        logging.info(f"cast_to: preserving channels_last for Conv2d weight {weight.shape}")
+    elif weight.ndim == 5 and weight.is_contiguous(memory_format=torch.channels_last_3d):
+        logging.info(f"cast_to: preserving channels_last_3d for Conv3d weight {weight.shape}")
+    
     if device is None or weight.device == device:
         if not copy:
             if dtype is None or weight.dtype == dtype:
@@ -1089,9 +1095,8 @@ def cast_to(weight, dtype=None, device=None, non_blocking=False, copy=False, str
             if hasattr(wf_context, "as_context"):
                 wf_context = wf_context.as_context(stream)
             with wf_context:
-                return weight.to(dtype=dtype, copy=copy)
-        return weight.to(dtype=dtype, copy=copy)
-
+                return weight.to(dtype=dtype, copy=copy, memory_format=torch.preserve_format)
+        return weight.to(dtype=dtype, copy=copy, memory_format=torch.preserve_format)
 
     if stream is not None:
         wf_context = stream
