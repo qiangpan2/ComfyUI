@@ -683,6 +683,7 @@ class ModelPatcher:
 
     def load(self, device_to=None, lowvram_model_memory=0, force_patch_weights=False, full_load=False):
         with self.use_ejected():
+            logging.info(f"ModelPatcher.load: loading model to device={device_to if device_to else self.load_device}, full_load={full_load}")
             self.unpatch_hooks()
             mem_counter = 0
             patch_counter = 0

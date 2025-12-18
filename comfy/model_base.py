@@ -148,7 +148,7 @@ class BaseModel(torch.nn.Module):
                     elif isinstance(module, torch.nn.Conv3d):
                         if module.weight.ndim == 5:
                             module.weight.data = module.weight.data.to(memory_format=torch.channels_last_3d)
-                logging.debug("Applied per-layer channels_last format to diffusion model")
+                logging.info("Applied per-layer channels_last format to diffusion model")
             logging.info("model weight dtype {}, manual cast: {}".format(self.get_dtype(), self.manual_cast_dtype))
         self.model_type = model_type
         self.model_sampling = model_sampling(model_config, model_type)
