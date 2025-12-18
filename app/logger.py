@@ -51,7 +51,7 @@ def on_flush(callback):
     if stderr_interceptor is not None:
         stderr_interceptor.on_flush(callback)
 
-def setup_logger(log_level: str = 'INFO', capacity: int = 300, use_stdout: bool = False):
+def setup_logger(log_level: str = 'INFO', capacity: int = 300, use_stdout: bool = False, no_log_intercept: bool = False):
     global logs
     if logs:
         return
@@ -61,8 +61,14 @@ def setup_logger(log_level: str = 'INFO', capacity: int = 300, use_stdout: bool 
 
     global stdout_interceptor
     global stderr_interceptor
-    stdout_interceptor = sys.stdout = LogInterceptor(sys.stdout)
-    stderr_interceptor = sys.stderr = LogInterceptor(sys.stderr)
+
+    if no_log_intercept:
+        stdout_interceptor = None
+        stderr_interceptor = None
+        logging.info("stdout/stderr interception disabled - all logs output directly to terminal")
+    else:
+        stdout_interceptor = sys.stdout = LogInterceptor(sys.stdout)
+        stderr_interceptor = sys.stderr = LogInterceptor(sys.stderr)
 
     # Setup default global logger
     logger = logging.getLogger()

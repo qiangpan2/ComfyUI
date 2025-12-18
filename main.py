@@ -21,7 +21,7 @@ if __name__ == "__main__":
     os.environ['HF_HUB_DISABLE_TELEMETRY'] = '1'
     os.environ['DO_NOT_TRACK'] = '1'
 
-setup_logger(log_level=args.verbose, use_stdout=args.log_stdout)
+setup_logger(log_level=args.verbose, use_stdout=args.log_stdout, no_log_intercept=args.no_log_intercept)
 
 
 def handle_comfyui_manager_unavailable():
