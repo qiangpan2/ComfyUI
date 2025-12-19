@@ -492,21 +492,13 @@ class WanVAE(nn.Module):
     
     def _apply_channels_last_optimization(self):
         """Enable channels_last optimization for all conv layers"""
-        causal_conv3d_count = 0
-        conv2d_count = 0
-        
         for module in self.modules():
             if isinstance(module, CausalConv3d):
                 module.use_channels_last = True
-                causal_conv3d_count += 1
             elif isinstance(module, torch.nn.Conv2d):
                 # Apply channels_last to Conv2d (in Resample and AttentionBlock)
                 if module.weight.ndim == 4:
                     module.weight.data = module.weight.data.to(memory_format=torch.channels_last)
-                    conv2d_count += 1
-        
-        if causal_conv3d_count > 0 or conv2d_count > 0:
-            logging.info(f"WanVAE: Applied channels_last to {causal_conv3d_count} Conv3d and {conv2d_count} Conv2d layers")
 
     def encode(self, x):
         conv_idx = [0]
