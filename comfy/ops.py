@@ -219,7 +219,7 @@ class disable_weight_init:
                 weight_ok = weight.is_contiguous(memory_format=torch.channels_last_3d)
                 input_ok = input.is_contiguous(memory_format=torch.channels_last_3d)
                 if not weight_ok or not input_ok:
-                    print(f"qiang: [Conv3d after cast_bias_weight] weight_ok={weight_ok}, input_ok={input_ok}")
+                    logging.warning(f"QIANG: Conv3d.forward_comfy_cast_weights - weight_ok={weight_ok}, input_ok={input_ok}")
             x = self._conv_forward(input, weight, bias)
             uncast_bias_weight(self, weight, bias, offload_stream)
             return x
@@ -236,7 +236,7 @@ class disable_weight_init:
                         weight_ok = self.weight.is_contiguous(memory_format=torch.channels_last_3d)
                         input_ok = input.is_contiguous(memory_format=torch.channels_last_3d)
                         if not weight_ok or not input_ok:
-                            print(f"qiang: [Conv3d direct path] weight_ok={weight_ok}, input_ok={input_ok}")
+                            logging.warning(f"QIANG: Conv3d.forward direct path - weight_ok={weight_ok}, input_ok={input_ok}")
                 return super().forward(*args, **kwargs)
 
     class GroupNorm(torch.nn.GroupNorm, CastWeightBiasOp):

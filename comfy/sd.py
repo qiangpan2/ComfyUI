@@ -539,6 +539,7 @@ class VAE:
                     self.memory_used_encode = lambda shape, dtype: 3300 * shape[3] * shape[4] * model_management.dtype_size(dtype)
                     self.memory_used_decode = lambda shape, dtype: 8000 * shape[3] * shape[4] * (16 * 16) * model_management.dtype_size(dtype)
                 else:  # Wan 2.1 VAE
+                    logging.warning("QIANG: sd.py - Before creating Wan 2.1 VAE")
                     dim = sd["decoder.head.0.gamma"].shape[0]
                     self.upscale_ratio = (lambda a: max(0, a * 4 - 3), 8, 8)
                     self.upscale_index_formula = (4, 8, 8)
@@ -548,6 +549,7 @@ class VAE:
                     self.latent_channels = 16
                     ddconfig = {"dim": dim, "z_dim": self.latent_channels, "dim_mult": [1, 2, 4, 4], "num_res_blocks": 2, "attn_scales": [], "temperal_downsample": [False, True, True], "dropout": 0.0}
                     self.first_stage_model = comfy.ldm.wan.vae.WanVAE(**ddconfig)
+                    logging.warning("QIANG: sd.py - After creating Wan 2.1 VAE")
                     self.working_dtypes = [torch.bfloat16, torch.float16, torch.float32]
                     self.memory_used_encode = lambda shape, dtype: 6000 * shape[3] * shape[4] * model_management.dtype_size(dtype)
                     self.memory_used_decode = lambda shape, dtype: 7000 * shape[3] * shape[4] * (8 * 8) * model_management.dtype_size(dtype)

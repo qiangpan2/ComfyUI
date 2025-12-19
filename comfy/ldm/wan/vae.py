@@ -6,6 +6,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from einops import rearrange
 from comfy.ldm.modules.diffusionmodules.model import vae_attention
+import logging
 
 import comfy.ops
 ops = comfy.ops.disable_weight_init
@@ -25,7 +26,7 @@ class CausalConv3d(ops.Conv3d):
         self.padding = (0, 0, 0)
         self.use_channels_last = use_channels_last
         if use_channels_last:
-            print("qiang: log init - CausalConv3d with channels_last enabled")
+            logging.warning("QIANG: CausalConv3d.__init__ - channels_last enabled")
 
     def forward(self, x, cache_x=None, cache_list=None, cache_idx=None):
         # Ensure input is channels_last_3d if enabled
@@ -55,7 +56,7 @@ class CausalConv3d(ops.Conv3d):
             weight_ok = self.weight.is_contiguous(memory_format=torch.channels_last_3d)
             input_ok = x.is_contiguous(memory_format=torch.channels_last_3d)
             if not weight_ok or not input_ok:
-                print(f"qiang: input or weight has issue - weight_ok={weight_ok}, input_ok={input_ok}, weight.shape={self.weight.shape}, input.shape={x.shape}")
+                logging.warning(f"QIANG: CausalConv3d.forward - weight_ok={weight_ok}, input_ok={input_ok}, weight.shape={self.weight.shape}, input.shape={x.shape}")
 
         return super().forward(x)
 
@@ -488,9 +489,9 @@ class WanVAE(nn.Module):
                                  attn_scales, self.temperal_upsample, dropout)
 
         import comfy.model_management
-        print(f"qiang: WanVAE init - force_channels_last={comfy.model_management.force_channels_last()}")
+        logging.warning(f"QIANG: WanVAE.__init__ - force_channels_last={comfy.model_management.force_channels_last()}")
         if comfy.model_management.force_channels_last():
-            print("qiang: WanVAE calling _apply_channels_last_optimization")
+            logging.warning("QIANG: WanVAE calling _apply_channels_last_optimization")
             self._apply_channels_last_optimization()
     
     def _apply_channels_last_optimization(self):
@@ -500,7 +501,7 @@ class WanVAE(nn.Module):
             if isinstance(module, CausalConv3d):
                 module.use_channels_last = True
                 count += 1
-        print(f"qiang: _apply_channels_last_optimization enabled {count} CausalConv3d layers")
+        logging.warning(f"QIANG: _apply_channels_last_optimization enabled {count} CausalConv3d layers")
 
     def encode(self, x):
         conv_idx = [0]
