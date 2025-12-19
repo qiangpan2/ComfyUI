@@ -24,6 +24,8 @@ class CausalConv3d(ops.Conv3d):
                          self.padding[1], 2 * self.padding[0], 0)
         self.padding = (0, 0, 0)
         self.use_channels_last = use_channels_last
+        if use_channels_last:
+            print("qiang: log init - CausalConv3d with channels_last enabled")
 
     def forward(self, x, cache_x=None, cache_list=None, cache_idx=None):
         # Ensure input is channels_last_3d if enabled
