@@ -487,10 +487,6 @@ class WanVAE(nn.Module):
         for module in self.modules():
             if isinstance(module, CausalConv3d):
                 module.use_channels_last = True
-            elif isinstance(module, torch.nn.Conv2d):
-                # Apply channels_last to Conv2d (in Resample and AttentionBlock)
-                if module.weight.ndim == 4:
-                    module.weight.data = module.weight.data.to(memory_format=torch.channels_last)
 
     def encode(self, x):
         conv_idx = [0]
