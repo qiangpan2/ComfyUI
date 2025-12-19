@@ -488,14 +488,19 @@ class WanVAE(nn.Module):
                                  attn_scales, self.temperal_upsample, dropout)
 
         import comfy.model_management
+        print(f"qiang: WanVAE init - force_channels_last={comfy.model_management.force_channels_last()}")
         if comfy.model_management.force_channels_last():
+            print("qiang: WanVAE calling _apply_channels_last_optimization")
             self._apply_channels_last_optimization()
     
     def _apply_channels_last_optimization(self):
         """Enable channels_last optimization for all conv layers"""
+        count = 0
         for module in self.modules():
             if isinstance(module, CausalConv3d):
                 module.use_channels_last = True
+                count += 1
+        print(f"qiang: _apply_channels_last_optimization enabled {count} CausalConv3d layers")
 
     def encode(self, x):
         conv_idx = [0]
