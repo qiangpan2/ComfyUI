@@ -28,6 +28,10 @@ class CausalConv3d(ops.Conv3d):
     def forward(self, x, cache_x=None, cache_list=None, cache_idx=None):
         # Ensure input is channels_last_3d if enabled
         if self.use_channels_last and x.ndim == 5:
+            # force check 
+            if not self.weight.is_contiguous(memory_format=torch.channels_last_3d):
+                self.weight.data = self.weight.data.to(memory_format=torch.channels_last_3d)
+            
             if not x.is_contiguous(memory_format=torch.channels_last_3d):
                 x = x.to(memory_format=torch.channels_last_3d)
         
