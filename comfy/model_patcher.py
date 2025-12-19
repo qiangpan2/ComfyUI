@@ -780,7 +780,7 @@ class ModelPatcher:
                 m.comfy_patched_weights = True
 
             for x in load_completely:
-                x[2].to(device_to)
+                x[2].to(device_to, memory_format=torch.preserve_format)
 
             for x in offloaded:
                 n = x[1]
