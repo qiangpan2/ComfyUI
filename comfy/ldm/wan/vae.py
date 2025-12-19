@@ -17,14 +17,21 @@ class CausalConv3d(ops.Conv3d):
     """
     Causal 3d convolusion.
     """
+    _channels_last_logged = False
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, use_channels_last=False, **kwargs):
         super().__init__(*args, **kwargs)
         self._padding = (self.padding[2], self.padding[2], self.padding[1],
                          self.padding[1], 2 * self.padding[0], 0)
         self.padding = (0, 0, 0)
+        self.use_channels_last = use_channels_last
 
     def forward(self, x, cache_x=None, cache_list=None, cache_idx=None):
+        # Ensure input is channels_last_3d if enabled
+        if self.use_channels_last and x.ndim == 5:
+            if not x.is_contiguous(memory_format=torch.channels_last_3d):
+                x = x.to(memory_format=torch.channels_last_3d)
+        
         if cache_list is not None:
             cache_x = cache_list[cache_idx]
             cache_list[cache_idx] = None
@@ -36,6 +43,18 @@ class CausalConv3d(ops.Conv3d):
             padding[4] -= cache_x.shape[2]
             del cache_x
         x = F.pad(x, padding)
+        
+        # Fix: F.pad may break channels_last_3d, restore it
+        if self.use_channels_last and x.ndim == 5:
+            is_cl3d = x.is_contiguous(memory_format=torch.channels_last_3d)
+            if not is_cl3d:
+                x = x.to(memory_format=torch.channels_last_3d)
+                if not CausalConv3d._channels_last_logged:
+                    logging.info("CausalConv3d: channels_last_3d optimization active (F.pad format restored)")
+                    CausalConv3d._channels_last_logged = True
+            elif not CausalConv3d._channels_last_logged:
+                logging.info("CausalConv3d: channels_last_3d optimization active (format preserved)")
+                CausalConv3d._channels_last_logged = True
 
         return super().forward(x)
 
@@ -466,6 +485,28 @@ class WanVAE(nn.Module):
         self.conv2 = CausalConv3d(z_dim, z_dim, 1)
         self.decoder = Decoder3d(dim, z_dim, dim_mult, num_res_blocks,
                                  attn_scales, self.temperal_upsample, dropout)
+
+        import comfy.model_management
+        if comfy.model_management.force_channels_last():
+            self._apply_channels_last_optimization()
+    
+    def _apply_channels_last_optimization(self):
+        """Enable channels_last optimization for all conv layers"""
+        causal_conv3d_count = 0
+        conv2d_count = 0
+        
+        for module in self.modules():
+            if isinstance(module, CausalConv3d):
+                module.use_channels_last = True
+                causal_conv3d_count += 1
+            elif isinstance(module, torch.nn.Conv2d):
+                # Apply channels_last to Conv2d (in Resample and AttentionBlock)
+                if module.weight.ndim == 4:
+                    module.weight.data = module.weight.data.to(memory_format=torch.channels_last)
+                    conv2d_count += 1
+        
+        if causal_conv3d_count > 0 or conv2d_count > 0:
+            logging.info(f"WanVAE: Applied channels_last to {causal_conv3d_count} Conv3d and {conv2d_count} Conv2d layers")
 
     def encode(self, x):
         conv_idx = [0]

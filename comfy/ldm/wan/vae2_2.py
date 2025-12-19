@@ -655,6 +655,33 @@ class WanVAE(nn.Module):
             self.temperal_upsample,
             dropout,
         )
+        
+        # Apply channels_last optimization if --force-channels-last is enabled
+        import comfy.model_management
+        if comfy.model_management.force_channels_last():
+            self._apply_channels_last_optimization()
+    
+    def _apply_channels_last_optimization(self):
+        """Enable channels_last optimization for all conv layers"""
+        import torch
+        from .vae import CausalConv3d
+        import logging
+        
+        causal_conv3d_count = 0
+        conv2d_count = 0
+        
+        for module in self.modules():
+            if isinstance(module, CausalConv3d):
+                module.use_channels_last = True
+                causal_conv3d_count += 1
+            elif isinstance(module, torch.nn.Conv2d):
+                # Apply channels_last to Conv2d (in Resample)
+                if module.weight.ndim == 4:
+                    module.weight.data = module.weight.data.to(memory_format=torch.channels_last)
+                    conv2d_count += 1
+        
+        if causal_conv3d_count > 0 or conv2d_count > 0:
+            logging.info(f"WanVAE (2.2): Applied channels_last to {causal_conv3d_count} Conv3d and {conv2d_count} Conv2d layers")
 
     def encode(self, x):
         conv_idx = [0]

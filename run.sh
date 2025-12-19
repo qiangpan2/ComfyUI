@@ -3,6 +3,8 @@ export MIOPEN_ENABLE_LOGGING_CMD=1
 export MIOPEN_LOG_LEVEL=7
 export MIOPEN_DEBUG_CONV_DIRECT_NAIVE_CONV_FWD=0   
 export PYTORCH_MIOPEN_SUGGEST_NHWC=1
+export AMD_LOG_LEVEL=3
+export ROCM_DEBUG_LEVEL=5
 
 mkdir -p models/vae && wget -O models/vae/wan_2.1_vae.safetensors "https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/vae/wan_2.1_vae.safetensors"
 
