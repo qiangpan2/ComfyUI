@@ -47,6 +47,13 @@ class CausalConv3d(ops.Conv3d):
         if self.use_channels_last and x.ndim == 5:
             if not x.is_contiguous(memory_format=torch.channels_last_3d):
                 x = x.to(memory_format=torch.channels_last_3d)
+        
+        # Check format before actual 3D convolution
+        if self.use_channels_last and x.ndim == 5:
+            weight_ok = self.weight.is_contiguous(memory_format=torch.channels_last_3d)
+            input_ok = x.is_contiguous(memory_format=torch.channels_last_3d)
+            if not weight_ok or not input_ok:
+                print(f"qiang: input or weight has issue - weight_ok={weight_ok}, input_ok={input_ok}, weight.shape={self.weight.shape}, input.shape={x.shape}")
 
         return super().forward(x)
 
