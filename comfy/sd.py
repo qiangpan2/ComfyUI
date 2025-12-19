@@ -733,16 +733,16 @@ class VAE:
 
     def decode_tiled_1d(self, samples, tile_x=128, overlap=32):
         if samples.ndim == 3:
-            decode_fn = lambda a: self.first_stage_model.decode(a.to(self.vae_dtype).to(self.device)).float()
+            decode_fn = lambda a: self.first_stage_model.decode(a.to(self.vae_dtype, memory_format=torch.preserve_format).to(self.device, memory_format=torch.preserve_format)).float()
         else:
             og_shape = samples.shape
             samples = samples.reshape((og_shape[0], og_shape[1] * og_shape[2], -1))
-            decode_fn = lambda a: self.first_stage_model.decode(a.reshape((-1, og_shape[1], og_shape[2], a.shape[-1])).to(self.vae_dtype).to(self.device)).float()
+            decode_fn = lambda a: self.first_stage_model.decode(a.reshape((-1, og_shape[1], og_shape[2], a.shape[-1])).to(self.vae_dtype, memory_format=torch.preserve_format).to(self.device, memory_format=torch.preserve_format)).float()
 
         return self.process_output(comfy.utils.tiled_scale_multidim(samples, decode_fn, tile=(tile_x,), overlap=overlap, upscale_amount=self.upscale_ratio, out_channels=self.output_channels, output_device=self.output_device))
 
     def decode_tiled_3d(self, samples, tile_t=999, tile_x=32, tile_y=32, overlap=(1, 8, 8)):
-        decode_fn = lambda a: self.first_stage_model.decode(a.to(self.vae_dtype).to(self.device)).float()
+        decode_fn = lambda a: self.first_stage_model.decode(a.to(self.vae_dtype, memory_format=torch.preserve_format).to(self.device, memory_format=torch.preserve_format)).float()
         return self.process_output(comfy.utils.tiled_scale_multidim(samples, decode_fn, tile=(tile_t, tile_x, tile_y), overlap=overlap, upscale_amount=self.upscale_ratio, out_channels=self.output_channels, index_formulas=self.upscale_index_formula, output_device=self.output_device))
 
     def encode_tiled_(self, pixel_samples, tile_x=512, tile_y=512, overlap = 64):
@@ -778,7 +778,7 @@ class VAE:
             return out.reshape(samples.shape[0], self.latent_channels, extra_channel_size, -1)
 
     def encode_tiled_3d(self, samples, tile_t=9999, tile_x=512, tile_y=512, overlap=(1, 64, 64)):
-        encode_fn = lambda a: self.first_stage_model.encode((self.process_input(a)).to(self.vae_dtype).to(self.device)).float()
+        encode_fn = lambda a: self.first_stage_model.encode((self.process_input(a)).to(self.vae_dtype, memory_format=torch.preserve_format).to(self.device, memory_format=torch.preserve_format)).float()
         return comfy.utils.tiled_scale_multidim(samples, encode_fn, tile=(tile_t, tile_x, tile_y), overlap=overlap, upscale_amount=self.downscale_ratio, out_channels=self.latent_channels, downscale=True, index_formulas=self.downscale_index_formula, output_device=self.output_device)
 
     def decode(self, samples_in, vae_options={}):
@@ -795,7 +795,7 @@ class VAE:
             batch_number = max(1, batch_number)
 
             for x in range(0, samples_in.shape[0], batch_number):
-                samples = samples_in[x:x+batch_number].to(self.vae_dtype).to(self.device)
+                samples = samples_in[x:x+batch_number].to(self.vae_dtype, memory_format=torch.preserve_format).to(self.device, memory_format=torch.preserve_format)
                 logging.info(f"VAE Decode: input device={samples.device}, dtype={samples.dtype}, shape={samples.shape}")
                 out = self.process_output(self.first_stage_model.decode(samples, **vae_options).to(self.output_device).float())
                 logging.info(f"VAE Decode: output device={out.device}, dtype={out.dtype}, shape={out.shape}")
@@ -871,7 +871,8 @@ class VAE:
             batch_number = max(1, batch_number)
             samples = None
             for x in range(0, pixel_samples.shape[0], batch_number):
-                pixels_in = self.process_input(pixel_samples[x:x + batch_number]).to(self.vae_dtype).to(self.device)
+                pixels_in = self.process_input(pixel_samples[x:x + batch_number])
+                pixels_in = pixels_in.to(self.vae_dtype, memory_format=torch.preserve_format).to(self.device, memory_format=torch.preserve_format)
                 logging.info(f"VAE Encode: input device={pixels_in.device}, dtype={pixels_in.dtype}, shape={pixels_in.shape}")
                 out = self.first_stage_model.encode(pixels_in).to(self.output_device).float()
                 logging.info(f"VAE Encode: output device={out.device}, dtype={out.dtype}, shape={out.shape}")

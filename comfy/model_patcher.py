@@ -616,7 +616,7 @@ class ModelPatcher:
         inplace_update = self.weight_inplace_update or inplace_update
 
         if key not in self.backup:
-            self.backup[key] = collections.namedtuple('Dimension', ['weight', 'inplace_update'])(weight.to(device=self.offload_device, copy=inplace_update), inplace_update)
+            self.backup[key] = collections.namedtuple('Dimension', ['weight', 'inplace_update'])(weight.to(device=self.offload_device, copy=inplace_update, memory_format=torch.preserve_format), inplace_update)
 
         temp_dtype = comfy.model_management.lora_compute_dtype(device_to)
         if device_to is not None:
@@ -854,7 +854,7 @@ class ModelPatcher:
             self.backup.clear()
 
             if device_to is not None:
-                self.model.to(device_to)
+                self.model.to(device_to, memory_format=torch.preserve_format)
                 self.model.device = device_to
             self.model.model_loaded_weight_memory = 0
             self.model.model_offload_buffer_memory = 0
@@ -914,7 +914,7 @@ class ModelPatcher:
                     bias_key = "{}.bias".format(n)
                     if move_weight:
                         cast_weight = self.force_cast_weights
-                        m.to(device_to)
+                        m.to(device_to, memory_format=torch.preserve_format)
                         module_mem += move_weight_functions(m, device_to)
                         if lowvram_possible:
                             if weight_key in self.patches:
