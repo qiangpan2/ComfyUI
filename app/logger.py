@@ -53,11 +53,9 @@ def on_flush(callback):
 
 def setup_logger(log_level: str = 'INFO', capacity: int = 300, use_stdout: bool = False, no_log_intercept: bool = False):
     global logs
-    if logs:
+    # Use 'is not None' instead of truthiness check because empty deque is falsy
+    if logs is not None:
         return
-
-    # Override output streams and log to buffer
-    logs = deque(maxlen=capacity)
 
     global stdout_interceptor
     global stderr_interceptor
@@ -65,10 +63,23 @@ def setup_logger(log_level: str = 'INFO', capacity: int = 300, use_stdout: bool 
     if no_log_intercept:
         stdout_interceptor = None
         stderr_interceptor = None
-        logging.info("stdout/stderr interception disabled - all logs output directly to terminal")
-    else:
-        stdout_interceptor = sys.stdout = LogInterceptor(sys.stdout)
-        stderr_interceptor = sys.stderr = LogInterceptor(sys.stderr)
+        logs = deque(maxlen=capacity)
+        
+        # Only set the log level, don't add any handlers
+        logger = logging.getLogger()
+        logger.setLevel(log_level)
+        
+        # Use basicConfig for minimal Python logging without intercepting streams
+        logging.basicConfig(level=log_level, format="%(message)s", force=True)
+        
+        print("stdout/stderr interception disabled - all logs output directly to terminal", file=sys.stderr)
+        return
+
+    # Override output streams and log to buffer
+    logs = deque(maxlen=capacity)
+
+    stdout_interceptor = sys.stdout = LogInterceptor(sys.stdout)
+    stderr_interceptor = sys.stderr = LogInterceptor(sys.stderr)
 
     # Setup default global logger
     logger = logging.getLogger()
