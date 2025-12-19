@@ -510,18 +510,18 @@ class ModelPatcher:
                 patch_list = patches[name]
                 for i in range(len(patch_list)):
                     if hasattr(patch_list[i], "to"):
-                        patch_list[i] = patch_list[i].to(device)
+                        patch_list[i] = patch_list[i].to(device, memory_format=torch.preserve_format)
         if "patches_replace" in to:
             patches = to["patches_replace"]
             for name in patches:
                 patch_list = patches[name]
                 for k in patch_list:
                     if hasattr(patch_list[k], "to"):
-                        patch_list[k] = patch_list[k].to(device)
+                        patch_list[k] = patch_list[k].to(device, memory_format=torch.preserve_format)
         if "model_function_wrapper" in self.model_options:
             wrap_func = self.model_options["model_function_wrapper"]
             if hasattr(wrap_func, "to"):
-                self.model_options["model_function_wrapper"] = wrap_func.to(device)
+                self.model_options["model_function_wrapper"] = wrap_func.to(device, memory_format=torch.preserve_format)
 
     def model_patches_models(self):
         to = self.model_options["transformer_options"]
@@ -622,7 +622,7 @@ class ModelPatcher:
         if device_to is not None:
             temp_weight = comfy.model_management.cast_to_device(weight, device_to, temp_dtype, copy=True)
         else:
-            temp_weight = weight.to(temp_dtype, copy=True)
+            temp_weight = weight.to(temp_dtype, copy=True, memory_format=torch.preserve_format)
         if convert_func is not None:
             temp_weight = convert_func(temp_weight, inplace=True)
 
@@ -1285,8 +1285,8 @@ class ModelPatcher:
                 used = memory_counter.use(weight)
                 if used:
                     target_device = weight.device
-            self.hook_backup[key] = (weight.to(device=target_device, copy=True), weight.device)
-        comfy.utils.copy_to_param(self.model, key, cached_weights[key][0].to(device=cached_weights[key][1]))
+            self.hook_backup[key] = (weight.to(device=target_device, copy=True, memory_format=torch.preserve_format), weight.device)
+        comfy.utils.copy_to_param(self.model, key, cached_weights[key][0].to(device=cached_weights[key][1], memory_format=torch.preserve_format))
 
     def clear_cached_hook_weights(self):
         self.cached_hook_patches.clear()
@@ -1304,7 +1304,7 @@ class ModelPatcher:
                 used = memory_counter.use(weight)
                 if used:
                     target_device = weight.device
-            self.hook_backup[key] = (weight.to(device=target_device, copy=True), weight.device)
+            self.hook_backup[key] = (weight.to(device=target_device, copy=True, memory_format=torch.preserve_format), weight.device)
         # TODO: properly handle LowVramPatch, if it ends up an issue
         temp_weight = comfy.model_management.cast_to_device(weight, weight.device, torch.float32, copy=True)
         if convert_func is not None:
@@ -1326,7 +1326,7 @@ class ModelPatcher:
             if used:
                 target_device = weight.device
             self.cached_hook_patches.setdefault(hooks, {})
-            self.cached_hook_patches[hooks][key] = (out_weight.to(device=target_device, copy=False), weight.device)
+            self.cached_hook_patches[hooks][key] = (out_weight.to(device=target_device, copy=False, memory_format=torch.preserve_format), weight.device)
         del temp_weight
         del out_weight
         del weight
@@ -1340,11 +1340,11 @@ class ModelPatcher:
             if whitelist_keys_set:
                 for k in keys:
                     if k in whitelist_keys_set:
-                        comfy.utils.copy_to_param(self.model, k, self.hook_backup[k][0].to(device=self.hook_backup[k][1]))
+                        comfy.utils.copy_to_param(self.model, k, self.hook_backup[k][0].to(device=self.hook_backup[k][1], memory_format=torch.preserve_format))
                         self.hook_backup.pop(k)
             else:
                 for k in keys:
-                    comfy.utils.copy_to_param(self.model, k, self.hook_backup[k][0].to(device=self.hook_backup[k][1]))
+                    comfy.utils.copy_to_param(self.model, k, self.hook_backup[k][0].to(device=self.hook_backup[k][1], memory_format=torch.preserve_format))
 
                 self.hook_backup.clear()
                 self.current_hooks = None

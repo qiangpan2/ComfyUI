@@ -114,7 +114,7 @@ def cast_bias_weight(s, input=None, dtype=None, device=None, bias_dtype=None, of
             bias = f(bias)
 
     if weight_has_function or weight.dtype != dtype:
-        weight = weight.to(dtype=dtype)
+        weight = weight.to(dtype=dtype, memory_format=torch.preserve_format)
         if isinstance(weight, QuantizedTensor):
             weight = weight.dequantize()
         for f in s.weight_function:

@@ -1103,10 +1103,10 @@ def cast_to(weight, dtype=None, device=None, non_blocking=False, copy=False, str
         if hasattr(wf_context, "as_context"):
             wf_context = wf_context.as_context(stream)
         with wf_context:
-            r = torch.empty_like(weight, dtype=dtype, device=device)
+            r = torch.empty_like(weight, dtype=dtype, device=device, memory_format=torch.preserve_format)
             r.copy_(weight, non_blocking=non_blocking)
     else:
-        r = torch.empty_like(weight, dtype=dtype, device=device)
+        r = torch.empty_like(weight, dtype=dtype, device=device, memory_format=torch.preserve_format)
         r.copy_(weight, non_blocking=non_blocking)
     return r
 
