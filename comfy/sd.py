@@ -682,7 +682,7 @@ class VAE:
             self.first_stage_model.to(self.vae_dtype, memory_format=torch.preserve_format)
         else:
             # Standard dtype conversion without memory format preservation
-        self.first_stage_model.to(self.vae_dtype)
+            self.first_stage_model.to(self.vae_dtype)
         
         self.output_device = model_management.intermediate_device()
 
