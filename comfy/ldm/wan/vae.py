@@ -17,7 +17,6 @@ class CausalConv3d(ops.Conv3d):
     """
     Causal 3d convolusion.
     """
-    _channels_last_logged = False
 
     def __init__(self, *args, use_channels_last=False, **kwargs):
         super().__init__(*args, **kwargs)
@@ -46,15 +45,8 @@ class CausalConv3d(ops.Conv3d):
         
         # Fix: F.pad may break channels_last_3d, restore it
         if self.use_channels_last and x.ndim == 5:
-            is_cl3d = x.is_contiguous(memory_format=torch.channels_last_3d)
-            if not is_cl3d:
+            if not x.is_contiguous(memory_format=torch.channels_last_3d):
                 x = x.to(memory_format=torch.channels_last_3d)
-                if not CausalConv3d._channels_last_logged:
-                    logging.info("CausalConv3d: channels_last_3d optimization active (F.pad format restored)")
-                    CausalConv3d._channels_last_logged = True
-            elif not CausalConv3d._channels_last_logged:
-                logging.info("CausalConv3d: channels_last_3d optimization active (format preserved)")
-                CausalConv3d._channels_last_logged = True
 
         return super().forward(x)
 
