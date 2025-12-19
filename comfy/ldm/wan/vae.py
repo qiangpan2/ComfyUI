@@ -177,7 +177,7 @@ class Resample(nn.Module):
 
 class ResidualBlock(nn.Module):
 
-    def __init__(self, in_dim, out_dim, dropout=0.0):
+    def __init__(self, in_dim, out_dim, dropout=0.0, use_channels_last=False):
         super().__init__()
         self.in_dim = in_dim
         self.out_dim = out_dim
@@ -185,10 +185,10 @@ class ResidualBlock(nn.Module):
         # layers
         self.residual = nn.Sequential(
             RMS_norm(in_dim, images=False), nn.SiLU(),
-            CausalConv3d(in_dim, out_dim, 3, padding=1),
+            CausalConv3d(in_dim, out_dim, 3, padding=1, use_channels_last=use_channels_last),
             RMS_norm(out_dim, images=False), nn.SiLU(), nn.Dropout(dropout),
-            CausalConv3d(out_dim, out_dim, 3, padding=1))
-        self.shortcut = CausalConv3d(in_dim, out_dim, 1) \
+            CausalConv3d(out_dim, out_dim, 3, padding=1, use_channels_last=use_channels_last))
+        self.shortcut = CausalConv3d(in_dim, out_dim, 1, use_channels_last=use_channels_last) \
             if in_dim != out_dim else nn.Identity()
 
     def forward(self, x, feat_cache=None, feat_idx=[0]):
@@ -252,7 +252,8 @@ class Encoder3d(nn.Module):
                  num_res_blocks=2,
                  attn_scales=[],
                  temperal_downsample=[True, True, False],
-                 dropout=0.0):
+                 dropout=0.0,
+                 use_channels_last=False):
         super().__init__()
         self.dim = dim
         self.z_dim = z_dim
@@ -266,14 +267,14 @@ class Encoder3d(nn.Module):
         scale = 1.0
 
         # init block
-        self.conv1 = CausalConv3d(3, dims[0], 3, padding=1)
+        self.conv1 = CausalConv3d(3, dims[0], 3, padding=1, use_channels_last=use_channels_last)
 
         # downsample blocks
         downsamples = []
         for i, (in_dim, out_dim) in enumerate(zip(dims[:-1], dims[1:])):
             # residual (+attention) blocks
             for _ in range(num_res_blocks):
-                downsamples.append(ResidualBlock(in_dim, out_dim, dropout))
+                downsamples.append(ResidualBlock(in_dim, out_dim, dropout, use_channels_last=use_channels_last))
                 if scale in attn_scales:
                     downsamples.append(AttentionBlock(out_dim))
                 in_dim = out_dim
@@ -288,13 +289,14 @@ class Encoder3d(nn.Module):
 
         # middle blocks
         self.middle = nn.Sequential(
-            ResidualBlock(out_dim, out_dim, dropout), AttentionBlock(out_dim),
-            ResidualBlock(out_dim, out_dim, dropout))
+            ResidualBlock(out_dim, out_dim, dropout, use_channels_last=use_channels_last), 
+            AttentionBlock(out_dim),
+            ResidualBlock(out_dim, out_dim, dropout, use_channels_last=use_channels_last))
 
         # output blocks
         self.head = nn.Sequential(
             RMS_norm(out_dim, images=False), nn.SiLU(),
-            CausalConv3d(out_dim, z_dim, 3, padding=1))
+            CausalConv3d(out_dim, z_dim, 3, padding=1, use_channels_last=use_channels_last))
 
     def forward(self, x, feat_cache=None, feat_idx=[0]):
         if feat_cache is not None:
@@ -356,7 +358,8 @@ class Decoder3d(nn.Module):
                  num_res_blocks=2,
                  attn_scales=[],
                  temperal_upsample=[False, True, True],
-                 dropout=0.0):
+                 dropout=0.0,
+                 use_channels_last=False):
         super().__init__()
         self.dim = dim
         self.z_dim = z_dim
@@ -370,12 +373,13 @@ class Decoder3d(nn.Module):
         scale = 1.0 / 2**(len(dim_mult) - 2)
 
         # init block
-        self.conv1 = CausalConv3d(z_dim, dims[0], 3, padding=1)
+        self.conv1 = CausalConv3d(z_dim, dims[0], 3, padding=1, use_channels_last=use_channels_last)
 
         # middle blocks
         self.middle = nn.Sequential(
-            ResidualBlock(dims[0], dims[0], dropout), AttentionBlock(dims[0]),
-            ResidualBlock(dims[0], dims[0], dropout))
+            ResidualBlock(dims[0], dims[0], dropout, use_channels_last=use_channels_last), 
+            AttentionBlock(dims[0]),
+            ResidualBlock(dims[0], dims[0], dropout, use_channels_last=use_channels_last))
 
         # upsample blocks
         upsamples = []
@@ -384,7 +388,7 @@ class Decoder3d(nn.Module):
             if i == 1 or i == 2 or i == 3:
                 in_dim = in_dim // 2
             for _ in range(num_res_blocks + 1):
-                upsamples.append(ResidualBlock(in_dim, out_dim, dropout))
+                upsamples.append(ResidualBlock(in_dim, out_dim, dropout, use_channels_last=use_channels_last))
                 if scale in attn_scales:
                     upsamples.append(AttentionBlock(out_dim))
                 in_dim = out_dim
@@ -399,7 +403,7 @@ class Decoder3d(nn.Module):
         # output blocks
         self.head = nn.Sequential(
             RMS_norm(out_dim, images=False), nn.SiLU(),
-            CausalConv3d(out_dim, 3, 3, padding=1))
+            CausalConv3d(out_dim, 3, 3, padding=1, use_channels_last=use_channels_last))
 
     def forward(self, x, feat_cache=None, feat_idx=[0]):
         ## conv1
@@ -480,28 +484,23 @@ class WanVAE(nn.Module):
         self.temperal_downsample = temperal_downsample
         self.temperal_upsample = temperal_downsample[::-1]
 
-        # modules
-        self.encoder = Encoder3d(dim, z_dim * 2, dim_mult, num_res_blocks,
-                                 attn_scales, self.temperal_downsample, dropout)
-        self.conv1 = CausalConv3d(z_dim * 2, z_dim * 2, 1)
-        self.conv2 = CausalConv3d(z_dim, z_dim, 1)
-        self.decoder = Decoder3d(dim, z_dim, dim_mult, num_res_blocks,
-                                 attn_scales, self.temperal_upsample, dropout)
-
+        # Check if we should use channels_last optimization
         import comfy.model_management
-        logging.warning(f"QIANG: WanVAE.__init__ - force_channels_last={comfy.model_management.force_channels_last()}")
-        if comfy.model_management.force_channels_last():
-            logging.warning("QIANG: WanVAE calling _apply_channels_last_optimization")
-            self._apply_channels_last_optimization()
-    
-    def _apply_channels_last_optimization(self):
-        """Enable channels_last optimization for all conv layers"""
-        count = 0
-        for module in self.modules():
-            if isinstance(module, CausalConv3d):
-                module.use_channels_last = True
-                count += 1
-        logging.warning(f"QIANG: _apply_channels_last_optimization enabled {count} CausalConv3d layers")
+        use_channels_last = comfy.model_management.force_channels_last()
+
+        # modules - now created with channels_last if enabled
+        logging.warning("QIANG: WanVAE.__init__ - Before creating encoder")
+        self.encoder = Encoder3d(dim, z_dim * 2, dim_mult, num_res_blocks,
+                                 attn_scales, self.temperal_downsample, dropout, 
+                                 use_channels_last=use_channels_last)
+        logging.warning("QIANG: WanVAE.__init__ - After encoder, before conv1")
+        self.conv1 = CausalConv3d(z_dim * 2, z_dim * 2, 1, use_channels_last=use_channels_last)
+        self.conv2 = CausalConv3d(z_dim, z_dim, 1, use_channels_last=use_channels_last)
+        logging.warning("QIANG: WanVAE.__init__ - After conv1/conv2, before decoder")
+        self.decoder = Decoder3d(dim, z_dim, dim_mult, num_res_blocks,
+                                 attn_scales, self.temperal_upsample, dropout,
+                                 use_channels_last=use_channels_last)
+        logging.warning("QIANG: WanVAE.__init__ - After decoder")
 
     def encode(self, x):
         conv_idx = [0]
