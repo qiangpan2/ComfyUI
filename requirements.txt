@@ -1,8 +1,7 @@
 comfyui-frontend-package==1.33.13
 comfyui-workflow-templates==0.7.54
 comfyui-embedded-docs==0.3.1
-torch @ file:///torch-2.9.1%2Brocm7.1.0.lw.git351ff442-cp312-cp312-linux_x86_64.whl#sha256=bff09fce55656db5954b7b79b007994d8421c9ef718e5681f686951af8b2a7ad
-triton @ file:///triton-3.5.1%2Brocm7.1.0.gita272dfa8-cp312-cp312-linux_x86_64.whl#sha256=ca50f1cbe8a92fb9976959c7d8ad4d60ec701d452cd4035b27db3153e19ef5f1
+torch @ file:///root/torch-2.9.0a0+gitfee8b3b-cp312-cp312-linux_x86_64.whl
 torchsde
 torchvision @ file:///torchvision-0.24.0%2Brocm7.1.0.gitb919bd0c-cp312-cp312-linux_x86_64.whl#sha256=de56228db2e2d1bad12d59e0f3f2caaee459413f6a7d47ca839ab4b3b1aa0e28
 torchaudio @ file:///torchaudio-2.9.0%2Brocm7.1.0.gite3c6ee2b-cp312-cp312-linux_x86_64.whl#sha256=a5199a0ed3329b0a3ca24b21fd9dfb1e4366f89022a30cd4c78b6d4c797db948
