@@ -11,6 +11,6 @@ MIOpenDriver convfp16 -n 1 -c 16 --in_d 5 -H 104 -W 60 -k 16 --fil_d 1 -y 1 -x 1
 
 uv run test_conv3d_simple.py > test.log  2>&1 
 #ShaderName : void ck_tile::kentry<ck_tile::gfx11_t, 2, ck_tile::GroupedConvolutionForwardKernel
-uv run  main.py --listen --port 2828 --force-channels-last --bf16-vae --bf16-unet --use-flash-attention  2>&1 | tee output.log
+uv run  main.py --listen --port 2828 --force-channels-last --bf16-vae --bf16-unet --use-flash-attention --highvram 2>&1 | tee output.log
 
 python main.py --listen --port 2828 --force-channels-last --bf16-vae --bf16-unet --use-flash-attention 2>&1 | tee output.log
