@@ -14,7 +14,7 @@ def apply_amd_conv_fix():
     target_dtype = torch.bfloat16
     
     logging.info("=" * 60)
-    logging.info("[AMD Conv Fix] Applying AMD ROCm Conv2d/Conv3d/ConvTranspose patch")
+    logging.info("[AMD Conv Fix] Applying AMD ROCm Conv2d/Conv3d/ConvTranspose/GridSample patch")
     logging.info(f"[AMD Conv Fix] Target dtype: {target_dtype}")
     logging.info(f"[AMD Conv Fix] ROCm version: {torch.version.hip}")
     logging.info(f"[AMD Conv Fix] Device: {torch.cuda.get_device_name(0)}")
@@ -23,6 +23,7 @@ def apply_amd_conv_fix():
     _orig_conv3d = torch.nn.functional.conv3d
     _orig_conv_transpose2d = torch.nn.functional.conv_transpose2d
     _orig_conv_transpose3d = torch.nn.functional.conv_transpose3d
+    _orig_grid_sample = torch.nn.functional.grid_sample
     
     def _amd_conv2d_wrapper(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
         """Conv2d wrapper:  fp32 -> bf16/fp16"""
@@ -68,10 +69,24 @@ def apply_amd_conv_fix():
         
         return _orig_conv_transpose3d(input, weight, bias, stride, padding, output_padding, groups, dilation)
     
+    def _amd_grid_sample_wrapper(input, grid, mode='bilinear', padding_mode='zeros', align_corners=None):
+        """grid_sample wrapper: ensure input and grid dtypes match for bf16/fp16"""
+        # If input is bf16/fp16 on CUDA, convert grid to match
+        if input.is_cuda and input.dtype in (torch.bfloat16, torch.float16):
+            if grid.dtype == torch.float32:
+                grid = grid.to(input.dtype)
+        # If grid is bf16/fp16 on CUDA, convert input to match
+        elif grid.is_cuda and grid.dtype in (torch.bfloat16, torch.float16):
+            if input.dtype == torch.float32:
+                input = input.to(grid.dtype)
+        
+        return _orig_grid_sample(input, grid, mode, padding_mode, align_corners)
+    
     torch.nn.functional.conv2d = _amd_conv2d_wrapper
     torch.nn.functional.conv3d = _amd_conv3d_wrapper
     torch.nn.functional.conv_transpose2d = _amd_conv_transpose2d_wrapper
     torch.nn.functional.conv_transpose3d = _amd_conv_transpose3d_wrapper
+    torch.nn.functional.grid_sample = _amd_grid_sample_wrapper
     
     return True
 
