@@ -47,17 +47,93 @@ def apply_amd_conv_fix():
         
         return _orig_conv3d(input, weight, bias, stride, padding, dilation, groups)
     
-    def _amd_conv_transpose2d_wrapper(input, weight, bias=None, stride=1, padding=0, output_padding=0, groups=1, dilation=1):
-        """ConvTranspose2d wrapper:  fp32 -> bf16/fp16"""
-        if input.dtype == torch.float32 and input.is_cuda:
-            input = input.to(target_dtype)
-        if weight.dtype == torch.float32 and weight.is_cuda:
-            weight = weight.to(target_dtype)
-        if bias is not None and bias.dtype == torch.float32 and bias.is_cuda:
-            bias = bias.to(target_dtype)
-        
-        return _orig_conv_transpose2d(input, weight, bias, stride, padding, output_padding, groups, dilation)
-    
+    import torch.nn.functional as F
+
+    def _to_2tuple(v):
+        if isinstance(v, tuple):
+            return v
+        return (v, v)
+
+    def zero_insert_upsample(x, stride):
+        if stride == (1, 1):
+            return x
+
+        B, C, H, W = x.shape
+        sH, sW = stride
+
+        out = torch.zeros(
+            B, C,
+            H * sH,
+            W * sW,
+            device=x.device,
+            dtype=x.dtype,
+        )
+
+        out[:, :, ::sH, ::sW] = x
+        return out
+
+
+    def _amd_conv_transpose2d_wrapper(
+        x, weight, bias=None,
+        stride=1, padding=0, output_padding=0,
+        groups=1, dilation=1
+    ):
+        stride = _to_2tuple(stride)
+        padding = _to_2tuple(padding)
+        output_padding = _to_2tuple(output_padding)
+        dilation = _to_2tuple(dilation)
+
+        # forward-only
+        x = x.detach().to(torch.bfloat16)
+        weight = weight.detach().to(torch.bfloat16)
+        if bias is not None:
+            bias = bias.detach().to(torch.bfloat16)
+
+        # zero-insert upsample
+        x = zero_insert_upsample(x, stride)
+
+        # flip kernel
+        weight_flip = weight.flip([2, 3]).permute(1, 0, 2, 3)
+
+        kH, kW = weight.shape[2:]
+
+        pad_h = kH - 1 - padding[0]
+        pad_w = kW - 1 - padding[1]
+
+        y = F.conv2d(
+            x,
+            weight_flip,
+            bias=bias,
+            stride=1,
+            padding=(pad_h, pad_w),
+            dilation=dilation,
+            groups=groups,
+        )
+
+        # ===== 關鍵：PyTorch 官方輸出尺寸 =====
+        H_in, W_in = x.shape[2] // stride[0], x.shape[3] // stride[1]
+
+        H_out = (
+            (H_in - 1) * stride[0]
+            - 2 * padding[0]
+            + dilation[0] * (kH - 1)
+            + output_padding[0]
+            + 1
+        )
+
+        W_out = (
+            (W_in - 1) * stride[1]
+            - 2 * padding[1]
+            + dilation[1] * (kW - 1)
+            + output_padding[1]
+            + 1
+        )
+
+        # ===== 強制裁切（避免 1152 / 1153 問題）=====
+        y = y[:, :, :H_out, :W_out]
+
+        return y
+
     def _amd_conv_transpose3d_wrapper(input, weight, bias=None, stride=1, padding=0, output_padding=0, groups=1, dilation=1):
         """ConvTranspose3d wrapper:  fp32 -> bf16/fp16"""
         if input.dtype == torch.float32 and input.is_cuda:
