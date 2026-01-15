@@ -337,9 +337,11 @@ AMD_RDNA2_AND_OLDER_ARCH = ["gfx1030", "gfx1031", "gfx1010", "gfx1011", "gfx1012
 try:
     if is_amd():
         arch = torch.cuda.get_device_properties(get_torch_device()).gcnArchName
-        if not (any((a in arch) for a in AMD_RDNA2_AND_OLDER_ARCH)):
-            torch.backends.cudnn.enabled = False  # Seems to improve things a lot on AMD
-            logging.info("Set: torch.backends.cudnn.enabled = False for better AMD performance.")
+        # QIANG: Do NOT disable cudnn.enabled on AMD, as it also disables MIOpen!
+        # PyTorch uses cudnn_enabled flag to control both cuDNN and MIOpen backends.
+        # if not (any((a in arch) for a in AMD_RDNA2_AND_OLDER_ARCH)):
+        #     torch.backends.cudnn.enabled = False
+        #     logging.info("Set: torch.backends.cudnn.enabled = False for better AMD performance.")
 
         try:
             rocm_version = tuple(map(int, str(torch.version.hip).split(".")[:2]))
@@ -1080,6 +1082,12 @@ def sync_stream(device, stream):
     current_stream(device).wait_stream(stream)
 
 def cast_to(weight, dtype=None, device=None, non_blocking=False, copy=False, stream=None):
+    # Log if we're preserving special memory formats
+    if weight.ndim == 4 and weight.is_contiguous(memory_format=torch.channels_last):
+        logging.info(f"cast_to: preserving channels_last for Conv2d weight {weight.shape}")
+    elif weight.ndim == 5 and weight.is_contiguous(memory_format=torch.channels_last_3d):
+        logging.info(f"cast_to: preserving channels_last_3d for Conv3d weight {weight.shape}")
+    
     if device is None or weight.device == device:
         if not copy:
             if dtype is None or weight.dtype == dtype:
@@ -1089,9 +1097,8 @@ def cast_to(weight, dtype=None, device=None, non_blocking=False, copy=False, str
             if hasattr(wf_context, "as_context"):
                 wf_context = wf_context.as_context(stream)
             with wf_context:
-                return weight.to(dtype=dtype, copy=copy)
-        return weight.to(dtype=dtype, copy=copy)
-
+                return weight.to(dtype=dtype, copy=copy, memory_format=torch.preserve_format)
+        return weight.to(dtype=dtype, copy=copy, memory_format=torch.preserve_format)
 
     if stream is not None:
         wf_context = stream

@@ -493,7 +493,7 @@ class AnimateWanModel(WanModel):
         **kwargs,
     ):
         # embeddings
-        x = self.patch_embedding(x.float()).to(x.dtype)
+        x = self.patch_embedding(x)
         x, motion_vec = self.after_patch_embedding(x, pose_latents, face_pixel_values)
         grid_sizes = x.shape[2:]
         x = x.flatten(2).transpose(1, 2)

@@ -668,6 +668,16 @@ class VAE:
             dtype = model_management.vae_dtype(self.device, self.working_dtypes)
         self.vae_dtype = dtype
         self.first_stage_model.to(self.vae_dtype)
+        if comfy.model_management.force_channels_last():
+            for name, module in self.first_stage_model.named_modules():
+                if isinstance(module, torch.nn.Conv2d):
+                    if module.weight.ndim == 4:  # (out_channels, in_channels, H, W)
+                        module.weight.data = module.weight.data.to(memory_format=torch.channels_last)
+                elif isinstance(module, torch.nn.Conv3d):
+                    if module.weight.ndim == 5:  # (out_channels, in_channels, D, H, W)
+                        module.weight.data = module.weight.data.to(memory_format=torch.channels_last_3d)
+            logging.info("Applied per-layer channels_last format to VAE")
+        
         self.output_device = model_management.intermediate_device()
 
         self.patcher = comfy.model_patcher.ModelPatcher(self.first_stage_model, load_device=self.device, offload_device=offload_device)
@@ -780,7 +790,9 @@ class VAE:
 
             for x in range(0, samples_in.shape[0], batch_number):
                 samples = samples_in[x:x+batch_number].to(self.vae_dtype).to(self.device)
+                logging.info(f"VAE Decode: input device={samples.device}, dtype={samples.dtype}, shape={samples.shape}")
                 out = self.process_output(self.first_stage_model.decode(samples, **vae_options).to(self.output_device).float())
+                logging.info(f"VAE Decode: output device={out.device}, dtype={out.dtype}, shape={out.shape}")
                 if pixel_samples is None:
                     pixel_samples = torch.empty((samples_in.shape[0],) + tuple(out.shape[1:]), device=self.output_device)
                 pixel_samples[x:x+batch_number] = out
@@ -854,7 +866,9 @@ class VAE:
             samples = None
             for x in range(0, pixel_samples.shape[0], batch_number):
                 pixels_in = self.process_input(pixel_samples[x:x + batch_number]).to(self.vae_dtype).to(self.device)
+                logging.info(f"VAE Encode: input device={pixels_in.device}, dtype={pixels_in.dtype}, shape={pixels_in.shape}")
                 out = self.first_stage_model.encode(pixels_in).to(self.output_device).float()
+                logging.info(f"VAE Encode: output device={out.device}, dtype={out.dtype}, shape={out.shape}")
                 if samples is None:
                     samples = torch.empty((pixel_samples.shape[0],) + tuple(out.shape[1:]), device=self.output_device)
                 samples[x:x + batch_number] = out

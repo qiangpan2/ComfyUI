@@ -474,7 +474,7 @@ class WanModel(torch.nn.Module):
 
         # embeddings
         self.patch_embedding = operations.Conv3d(
-            in_dim, dim, kernel_size=patch_size, stride=patch_size, device=operation_settings.get("device"), dtype=torch.float32)
+            in_dim, dim, kernel_size=patch_size, stride=patch_size, device=operation_settings.get("device"), dtype=operation_settings.get("dtype"))
         self.text_embedding = nn.Sequential(
             operations.Linear(text_dim, dim, device=operation_settings.get("device"), dtype=operation_settings.get("dtype")), nn.GELU(approximate='tanh'),
             operations.Linear(dim, dim, device=operation_settings.get("device"), dtype=operation_settings.get("dtype")))
@@ -539,7 +539,7 @@ class WanModel(torch.nn.Module):
                 List of denoised video tensors with original input shapes [C_out, F, H / 8, W / 8]
         """
         # embeddings
-        x = self.patch_embedding(x.float()).to(x.dtype)
+        x = self.patch_embedding(x)
         grid_sizes = x.shape[2:]
         x = x.flatten(2).transpose(1, 2)
 
@@ -717,7 +717,7 @@ class VaceWanModel(WanModel):
             self.vace_layers_mapping = {i: n for n, i in enumerate(range(0, self.num_layers, self.num_layers // self.vace_layers))}
             # vace patch embeddings
             self.vace_patch_embedding = operations.Conv3d(
-                self.vace_in_dim, self.dim, kernel_size=self.patch_size, stride=self.patch_size, device=device, dtype=torch.float32
+                self.vace_in_dim, self.dim, kernel_size=self.patch_size, stride=self.patch_size, device=device, dtype=dtype
             )
 
     def forward_orig(
@@ -733,7 +733,7 @@ class VaceWanModel(WanModel):
         **kwargs,
     ):
         # embeddings
-        x = self.patch_embedding(x.float()).to(x.dtype)
+        x = self.patch_embedding(x)
         grid_sizes = x.shape[2:]
         x = x.flatten(2).transpose(1, 2)
 
@@ -754,7 +754,7 @@ class VaceWanModel(WanModel):
 
         orig_shape = list(vace_context.shape)
         vace_context = vace_context.movedim(0, 1).reshape([-1] + orig_shape[2:])
-        c = self.vace_patch_embedding(vace_context.float()).to(vace_context.dtype)
+        c = self.vace_patch_embedding(vace_context)
         c = c.flatten(2).transpose(1, 2)
         c = list(c.split(orig_shape[0], dim=0))
 
@@ -839,7 +839,7 @@ class CameraWanModel(WanModel):
         **kwargs,
     ):
         # embeddings
-        x = self.patch_embedding(x.float()).to(x.dtype)
+        x = self.patch_embedding(x)
         if self.control_adapter is not None and camera_conditions is not None:
             x = x + self.control_adapter(camera_conditions).to(x.dtype)
         grid_sizes = x.shape[2:]
@@ -1281,7 +1281,7 @@ class WanModel_S2V(WanModel):
 
         # embeddings
         bs, _, time, height, width = x.shape
-        x = self.patch_embedding(x.float()).to(x.dtype)
+        x = self.patch_embedding(x)
         if control_video is not None:
             x = x + self.cond_encoder(control_video)
 
@@ -1296,7 +1296,7 @@ class WanModel_S2V(WanModel):
         x = x + cond_mask_weight[0]
 
         if reference_latent is not None:
-            ref = self.patch_embedding(reference_latent.float()).to(x.dtype)
+            ref = self.patch_embedding(reference_latent)
             ref = ref.flatten(2).transpose(1, 2)
             freqs_ref = self.rope_encode(reference_latent.shape[-3], reference_latent.shape[-2], reference_latent.shape[-1], t_start=max(30, time + 9), device=x.device, dtype=x.dtype)
             ref = ref + cond_mask_weight[1]
@@ -1542,7 +1542,7 @@ class HumoWanModel(WanModel):
         bs, _, time, height, width = x.shape
 
         # embeddings
-        x = self.patch_embedding(x.float()).to(x.dtype)
+        x = self.patch_embedding(x)
         grid_sizes = x.shape[2:]
         x = x.flatten(2).transpose(1, 2)
 
@@ -1553,7 +1553,7 @@ class HumoWanModel(WanModel):
         e0 = self.time_projection(e).unflatten(2, (6, self.dim))
 
         if reference_latent is not None:
-            ref = self.patch_embedding(reference_latent.float()).to(x.dtype)
+            ref = self.patch_embedding(reference_latent)
             ref = ref.flatten(2).transpose(1, 2)
             freqs_ref = self.rope_encode(reference_latent.shape[-3], reference_latent.shape[-2], reference_latent.shape[-1], t_start=time, device=x.device, dtype=x.dtype)
             x = torch.cat([x, ref], dim=1)
