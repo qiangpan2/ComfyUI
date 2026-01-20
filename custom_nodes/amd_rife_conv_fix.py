@@ -14,7 +14,7 @@ def apply_amd_conv_fix():
     target_dtype = torch.bfloat16
     
     logging.info("=" * 60)
-    logging.info("[AMD Conv Fix] Applying AMD ROCm Conv2d/Conv3d/ConvTranspose/GridSample patch")
+    logging.info("[AMD Conv Fix] Applying AMD ROCm Conv2d/Conv3d/ConvTranspose/GridSample/PReLU patch")
     logging.info(f"[AMD Conv Fix] Target dtype: {target_dtype}")
     logging.info(f"[AMD Conv Fix] ROCm version: {torch.version.hip}")
     logging.info(f"[AMD Conv Fix] Device: {torch.cuda.get_device_name(0)}")
@@ -24,6 +24,7 @@ def apply_amd_conv_fix():
     _orig_conv_transpose2d = torch.nn.functional.conv_transpose2d
     _orig_conv_transpose3d = torch.nn.functional.conv_transpose3d
     _orig_grid_sample = torch.nn.functional.grid_sample
+    _orig_prelu = torch.nn.functional.prelu
     
     def _amd_conv2d_wrapper(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
         """Conv2d wrapper:  fp32 -> bf16/fp16"""
@@ -82,11 +83,25 @@ def apply_amd_conv_fix():
         
         return _orig_grid_sample(input, grid, mode, padding_mode, align_corners)
     
+    def _amd_prelu_wrapper(input, weight):
+        """prelu wrapper: ensure weight dtype matches input dtype for bf16/fp16"""
+        # If input is bf16/fp16 on CUDA, convert weight to match
+        if input.is_cuda and input.dtype in (torch.bfloat16, torch.float16):
+            if weight.dtype == torch.float32:
+                weight = weight.to(input.dtype)
+        # Also handle the reverse case: if weight is bf16/fp16, convert input to match
+        elif weight.is_cuda and weight.dtype in (torch.bfloat16, torch.float16):
+            if input.dtype == torch.float32:
+                input = input.to(weight.dtype)
+        
+        return _orig_prelu(input, weight)
+    
     torch.nn.functional.conv2d = _amd_conv2d_wrapper
     torch.nn.functional.conv3d = _amd_conv3d_wrapper
     torch.nn.functional.conv_transpose2d = _amd_conv_transpose2d_wrapper
     torch.nn.functional.conv_transpose3d = _amd_conv_transpose3d_wrapper
     torch.nn.functional.grid_sample = _amd_grid_sample_wrapper
+    torch.nn.functional.prelu = _amd_prelu_wrapper
     
     return True
 
