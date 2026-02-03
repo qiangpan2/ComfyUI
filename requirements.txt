@@ -3,7 +3,8 @@ comfyui-workflow-templates==0.7.54
 comfyui-embedded-docs==0.3.1
 amdsmi @ file:///opt/rocm-7.1.0/share/amd_smi
 torch @ file:///root/torch-2.9.1+git822752c-cp312-cp312-linux_x86_64.whl
-triton @ https://repo.radeon.com/rocm/manylinux/rocm-rel-7.1.1/triton-3.5.1%2Brocm7.1.1.gita272dfa8-cp312-cp312-linux_x86_64.whl#sha256=2796f572c4f0f1ced79130bd0a2dc82759e6a0d219a10f4c99c4d8031ec0590e
+triton @ file:///root/triton-3.6.0-cp312-cp312-linux_x86_64.whl
+flash_attn @ file:///root/flash_attn-2.8.3-py3-none-any.whl
 torchsde
 torchvision @ https://repo.radeon.com/rocm/manylinux/rocm-rel-7.1.1/torchvision-0.24.0%2Brocm7.1.1.gitb919bd0c-cp312-cp312-linux_x86_64.whl#sha256=6ec9034b6f59ca811bb3b0c87102a212b2996ddd1636acdba3a4a7559caeb600
 torchaudio @ https://repo.radeon.com/rocm/manylinux/rocm-rel-7.1.1/torchaudio-2.9.0%2Brocm7.1.1.gite3c6ee2b-cp312-cp312-linux_x86_64.whl#sha256=3acb2401a52641d7086bfeb42780c6d3575b0fc90b4fc9a5570bee46a74f2f9d
