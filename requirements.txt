@@ -1,7 +1,6 @@
 comfyui-frontend-package==1.33.13
 comfyui-workflow-templates==0.7.54
 comfyui-embedded-docs==0.3.1
-amdsmi @ file:///opt/rocm-7.1.0/share/amd_smi
 torch @ file:///root/torch-2.9.1+git822752c-cp312-cp312-linux_x86_64.whl
 triton @ file:///root/triton-3.6.0-cp312-cp312-linux_x86_64.whl
 flash_attn @ file:///root/flash_attn-2.8.3-py3-none-any.whl
