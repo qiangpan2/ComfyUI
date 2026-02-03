@@ -2,11 +2,11 @@ comfyui-frontend-package==1.33.13
 comfyui-workflow-templates==0.7.54
 comfyui-embedded-docs==0.3.1
 amdsmi @ file:///opt/rocm-7.1.0/share/amd_smi
-torch @ file:///root/torch-2.9.1+git672b907-cp312-cp312-linux_x86_64.whl
-triton @ file:///triton-3.5.1%2Brocm7.1.0.gita272dfa8-cp312-cp312-linux_x86_64.whl#sha256=ca50f1cbe8a92fb9976959c7d8ad4d60ec701d452cd4035b27db3153e19ef5f1
+torch @ file:///root/torch-2.9.1+git822752c-cp312-cp312-linux_x86_64.whl
+triton @ https://repo.radeon.com/rocm/manylinux/rocm-rel-7.1.1/triton-3.5.1%2Brocm7.1.1.gita272dfa8-cp312-cp312-linux_x86_64.whl#sha256=2796f572c4f0f1ced79130bd0a2dc82759e6a0d219a10f4c99c4d8031ec0590e
 torchsde
-torchvision @ file:///torchvision-0.24.0%2Brocm7.1.0.gitb919bd0c-cp312-cp312-linux_x86_64.whl#sha256=de56228db2e2d1bad12d59e0f3f2caaee459413f6a7d47ca839ab4b3b1aa0e28
-torchaudio @ file:///torchaudio-2.9.0%2Brocm7.1.0.gite3c6ee2b-cp312-cp312-linux_x86_64.whl#sha256=a5199a0ed3329b0a3ca24b21fd9dfb1e4366f89022a30cd4c78b6d4c797db948
+torchvision @ https://repo.radeon.com/rocm/manylinux/rocm-rel-7.1.1/torchvision-0.24.0%2Brocm7.1.1.gitb919bd0c-cp312-cp312-linux_x86_64.whl#sha256=6ec9034b6f59ca811bb3b0c87102a212b2996ddd1636acdba3a4a7559caeb600
+torchaudio @ https://repo.radeon.com/rocm/manylinux/rocm-rel-7.1.1/torchaudio-2.9.0%2Brocm7.1.1.gite3c6ee2b-cp312-cp312-linux_x86_64.whl#sha256=3acb2401a52641d7086bfeb42780c6d3575b0fc90b4fc9a5570bee46a74f2f9d
 numpy>=1.25.0
 einops
 transformers>=4.50.3
