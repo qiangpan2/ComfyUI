@@ -30,3 +30,8 @@ kornia>=0.7.1
 spandrel
 pydantic~=2.0
 pydantic-settings~=2.0
+
+# CuPy for AMD ROCm (required by GIMM-VFI softsplat)
+--find-links https://pip.cupy.dev/pre
+--pre
+cupy-rocm-7-0
