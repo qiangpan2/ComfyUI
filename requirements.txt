@@ -25,6 +25,7 @@ SQLAlchemy
 av>=14.2.0
 
 #non essential dependencies:
+requests
 kornia>=0.7.1
 spandrel
 pydantic~=2.0
